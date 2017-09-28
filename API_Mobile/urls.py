@@ -15,7 +15,9 @@ Including another URLconf
 """
 from django.conf.urls import url
 from django.contrib import admin
+from API_SITE.views import logon
 
 urlpatterns = [
     #url(r'^admin/', admin.site.urls),
+    url(r'^service_logon$', logon),
 ]
