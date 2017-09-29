@@ -40,7 +40,7 @@ def get_offered_vehicles(request):
         if service is None:
             return JsonResponse({"code": 404})
         else:
-            offers = Offer.objects.all().filter(service=service)
+            offers = Offer.objects.all().filter(service=service, status=2)
             body = list()
             for offer in offers:
                 raw_vehicle = offer.vehicle
@@ -102,8 +102,12 @@ def create_offer(request):
         if vehicle is None:
             return JsonResponse({"code": 404})
         else:
-            Offer.objects.create(vehicle=vehicle, service=service, price=price, message=message, date=date, is_confirmed = False)
-            return JsonResponse({"code": 200})
+            offer = Offer.objects.filter(vehicle=vehicle, service=service).first()
+            if offer is None or offer.status == 3:
+                Offer.objects.create(vehicle=vehicle, service=service, price=price, message=message, date=date, status=0)
+                return JsonResponse({"code": 200})
+            else:
+                return JsonResponse({"code": 500})
     except Exception as e:
         print(e)
         return JsonResponse({"code": 404})
@@ -114,6 +118,7 @@ def get_offers(request):
         json_data = json.loads(str(request.body, encoding='utf-8'))
         print(json_data)
         service_id = json_data['service_id']
+        #service_id = request.POST['service_id']
         service = Service.objects.get(pk=service_id)
         if service is None:
             return JsonResponse({"code": 404})
@@ -121,9 +126,23 @@ def get_offers(request):
             offers = Offer.objects.all().filter(service=service).values('id',
                                                                 'price',
                                                                 'message',
-                                                                'is_confirmed',
-                                                                'date')
+                                                                'status',
+                                                                'date',
+                                                                'vehicle_id')
             offers = list(offers)
+
+            for offer in offers:
+                raw_vehicle = Vehicle.objects.get(pk=offer["vehicle_id"])
+                vehicle = {
+                    "id": raw_vehicle.id,
+                    "year": raw_vehicle.year,
+                    "brand": raw_vehicle.brand,
+                    "model": raw_vehicle.model,
+                    "vin": raw_vehicle.VIN,
+                    "number": raw_vehicle.number
+                }
+                offer["vehicle"] = vehicle
+
             return JsonResponse({"code": 200, "offers": offers})
     except Exception as e:
         print(e)
@@ -143,8 +162,29 @@ def get_reviews(request):
                                                                 'user__firstname',
                                                                 'text',
                                                                 'date')
-            offers = list(offers)
-            return JsonResponse({"code": 200, "offers": offers})
+            reviews = list(reviews)
+            return JsonResponse({"code": 200, "reviews": reviews})
+    except Exception as e:
+        print(e)
+        return JsonResponse({"code": 404})
+
+
+def complete_offer(request):
+    try:
+        json_data = json.loads(str(request.body, encoding='utf-8'))
+        print(json_data)
+        offer_id = json_data['offer_id']
+        offer = Offer.objects.get(pk=offer_id)
+        if offer is None:
+            return JsonResponse({"code": 404})
+        else:
+            offer.status = 3
+            vehicle = offer.vehicle
+            crashes = Crash.objects.filter(vehicle=vehicle)
+            for crash in crashes:
+                crash.actual = False
+                crash.save()
+            return JsonResponse({"code": 200})
     except Exception as e:
         print(e)
         return JsonResponse({"code": 404})
