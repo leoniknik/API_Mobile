@@ -15,7 +15,7 @@ Including another URLconf
 """
 from django.conf.urls import url
 from django.contrib import admin
-from API_SITE.views import logon, get_offered_vehicles, get_lists_of_vehicles_and_crashes, create_offer, get_offers, get_reviews
+from API_SITE.views import logon, get_offered_vehicles, get_lists_of_vehicles_and_crashes, create_offer, get_offers, get_reviews, user_by_vehicle
 
 urlpatterns = [
     #url(r'^admin/', admin.site.urls),
@@ -24,5 +24,7 @@ urlpatterns = [
     url(r'^get_lists_of_vehicles_and_crashes$', get_lists_of_vehicles_and_crashes),
     url(r'^create_offer$', create_offer),
     url(r'^get_offers$', get_offers),
-    url(r'^get_reviews$', get_reviews)
+    url(r'^get_reviews$', get_reviews),
+    url(r'^user_by_vehicle$', user_by_vehicle),
+
 ]

@@ -65,13 +65,27 @@ def get_offered_vehicles(request):
 
 def get_lists_of_vehicles_and_crashes(request):
     try:
-        vehicles = Vehicle.objects.all().values('id', 'VIN', 'number', 'brand', 'model', 'year')
+        json_data = json.loads(str(request.body, encoding='utf-8'))
+        print(json_data)
+        service_id = json_data['service_id']
+        #service_id = request.POST['service_id']
+        vehicles = Vehicle.objects.all().filter(is_auction=True).values('id', 'VIN', 'number', 'brand', 'model', 'year')
+
         vehicles = list(vehicles)
         for vehicle in vehicles:
+
+            service = Service.objects.filter(pk=service_id)
+            raw_vehicle = Vehicle.objects.filter(pk=vehicle["id"])
+            offer = Offer.objects.filter(vehicle=raw_vehicle, service=service).first()
+            if offer is not None:
+                if offer.status != 3:
+                    vehicle["status"] = offer.status
+
             actual_crashes = Crash.objects.filter(vehicle_id=vehicle["id"], actual=True).values('id', 'description__code', 'description__full_description',
                                     'description__short_description', 'date')
             actual_crashes = list(actual_crashes)
             vehicle['actual_crashes'] = actual_crashes
+
 
             history_crashes = Crash.objects.filter(vehicle_id=vehicle["id"], actual=False).values('id',
                                                                                                 'description__code',
@@ -185,6 +199,25 @@ def complete_offer(request):
                 crash.actual = False
                 crash.save()
             return JsonResponse({"code": 200})
+    except Exception as e:
+        print(e)
+        return JsonResponse({"code": 404})
+
+
+def user_by_vehicle(request):
+    try:
+        json_data = json.loads(str(request.body, encoding='utf-8'))
+        print(json_data)
+        vehicle_id = json_data['vehicle_id']
+        vehicle = Vehicle.objects.get(pk=vehicle_id)
+        user = vehicle.user
+        return JsonResponse({"code": 200, 
+                             "id": user.id,
+                             "phone": user.phone,
+                             "email": user.email,
+                             "lastname": user.lastname,
+                             "firstname": user.firstname
+                            })
     except Exception as e:
         print(e)
         return JsonResponse({"code": 404})
