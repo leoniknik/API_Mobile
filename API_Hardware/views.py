@@ -1,6 +1,10 @@
 import paho.mqtt.client as mqtt
 from API_Hardware.models import *
 import multiprocessing
+from django.http import JsonResponse, HttpResponse, HttpResponseForbidden, HttpResponseBadRequest
+from django.core import serializers
+import json
+
 
 import random
 import time
@@ -10,6 +14,27 @@ mqtt_listener = None
 queue = multiprocessing.Queue()
 analyzers = []
 debug = False
+
+def get_car_data(request):
+    try:
+        json_data = json.loads(str(request.body, encoding='utf-8'))
+        print(json_data)
+        vin = json_data['vin']
+
+        vehicle = Vehicle.objects.get(vin=vin)
+
+        if vehicle is None:
+            return JsonResponse({"code": 404})
+        else:
+
+            telemetry = LocationTelemetry.objects.filter(vehicle=vehicle).values('id', 'spd', 'latitude', 'longitude')[:5]
+            telemetry = list(telemetry)
+            return JsonResponse({"code": 200, "data":
+                    telemetry
+                })
+    except Exception as e:
+        print(e)
+        return JsonResponse({"code": 404})
 
 class MessageParser:
     car_id = 0
