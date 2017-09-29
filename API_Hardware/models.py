@@ -30,3 +30,9 @@ class Telemetry(models.Model):
 class SpeedExcess(models.Model):
     loc_telemetry = models.ForeignKey(LocationTelemetry,null=True)
     limit = models.IntegerField(verbose_name='limit', default=0)
+
+class AccelerationExcess(models.Model):
+    telemetry = models.ForeignKey(Telemetry, null=True)
+
+class ControlExcess(models.Model):
+    control_telemetry = models.ForeignKey(ControlTelemetry, null=True)

@@ -9,7 +9,7 @@ import calendar
 mqtt_listener = None
 queue = multiprocessing.Queue()
 analyzers = []
-
+debug = False
 
 class MessageParser:
     car_id = 0
@@ -35,13 +35,14 @@ class MessageParser:
             self.parse_dataset_3()
         elif self.dataset_type_id == 4:
             self.parse_dataset_4()
+        print(calendar.timegm(time.gmtime()))
 
     def parse_dataset_1(self):
-        print("dataset_1")
+        if debug : print("dataset_1")
         #message_date_time = datetime.datetime.utcfromtimestamp(int(self.raw_data[0]))
-        #print(message_date_time)
+        #if debug : print(message_date_time)
         error_codes = self.raw_data[1:]
-        print(error_codes)
+        if debug : print(error_codes)
         vehicle = Vehicle.objects.get(VIN=self.car_id)
 
         if vehicle is not None:
@@ -61,19 +62,19 @@ class MessageParser:
 #datetime.datetime.utcnow()#str(datetime.datetime)#message_date_time
                     crash.vehicle = vehicle
                     crash.save()
-                    print(error)
+                    if debug : print(error)
 
 
     def parse_dataset_2(self):
-        print("dataset_2")
+        if debug : print("dataset_2")
         #message_date_time = datetime.datetime.utcfromtimestamp(int(self.raw_data[0]))
-        #print(message_date_time)
-        rpm = float(int(self.raw_data[1])/3000.1)*8000
-        torque = int(self.raw_data[2])/250.1
-        breake = int(self.raw_data[3])/250.1
-        print("rpm "+str(rpm))
-        print("torque " + str(torque))
-        print("breake " + str(breake))
+        #if debug : print(message_date_time)
+        rpm = float(float(self.raw_data[1])/3000.1)*8000
+        torque = float(self.raw_data[2])/250.1
+        breake = float(self.raw_data[3])/250.1
+        if debug : print("rpm "+str(rpm))
+        if debug : print("torque " + str(torque))
+        if debug : print("breake " + str(breake))
 
         vehicle = Vehicle.objects.get(VIN=self.car_id)
 
@@ -87,16 +88,19 @@ class MessageParser:
             control_telemetry.torque = torque
             control_telemetry.save()
 
+            if(breake>0.7 or torque>0.7):
+                ControlExcess.objects.create(control_telemetry=control_telemetry).save()
+
     def parse_dataset_3(self):
-        print("dataset_3")
+        if debug : print("dataset_3")
         #message_date_time = datetime.datetime.utcfromtimestamp(int(self.raw_data[0]))
-        #print(message_date_time)
+        #if debug : print(message_date_time)
         spd = float(self.raw_data[1])
         latitude = float(self.raw_data[2])
         longitude = float(self.raw_data[3])
-        print("spd " + str(spd))
-        print("latitude " + str(latitude))
-        print("longetude " + str(longitude))
+        if debug : print("spd " + str(spd))
+        if debug : print("latitude " + str(latitude))
+        if debug : print("longetude " + str(longitude))
 
         vehicle = Vehicle.objects.get(VIN=self.car_id)
 
@@ -110,25 +114,22 @@ class MessageParser:
             telemetry.longitude = longitude
             telemetry.save()
 
-            spd_task = SpeedTask.objects.create()
-            spd_task.loc_telemetry = telemetry
-            spd_task.save()
+            #analys(telemetry)
 
-            for task in SpeedTask.objects.all():
-                queue.put(task.id)
+            queue.put(telemetry.id)
 
     def parse_dataset_4(self):
-        print("dataset_4")
+        if debug : print("dataset_4")
         #message_date_time = datetime.utcfromtimestamp(int(self.raw_data[0]))
-        #print(message_date_time)
+        #if debug : print(message_date_time)
         fuel = float(float(self.raw_data[1]) / 255.0)
-        print("fuel " + str(fuel))
+        if debug : print("fuel " + str(fuel))
         acc_x = float(self.raw_data[2])
         acc_y = float(self.raw_data[3])
         acc_z = float(self.raw_data[4])
-        print('acc_x ' + str(acc_x))
-        print('acc_y ' + str(acc_y))
-        print('acc_z ' + str(acc_z))
+        if debug : print('acc_x ' + str(acc_x))
+        if debug : print('acc_y ' + str(acc_y))
+        if debug : print('acc_z ' + str(acc_z))
 
         vehicle = Vehicle.objects.get(VIN=self.car_id)
 
@@ -143,17 +144,20 @@ class MessageParser:
             telemetry.acc_z = acc_z
             telemetry.save()
 
+            if(acc_x>8 or acc_y>8or acc_z>8):
+                AccelerationExcess.objects.create(telemetry=telemetry).save()
 
 
 
 
 def on_connect(rc):
-    print("rc: " + str(rc))
+    if debug : print("rc: " + str(rc))
 
 
 def on_message(q,e,msg):
-    print(msg.topic + " " + str(msg.qos) + " " + str(msg.payload))
+    if debug : print(msg.topic + " " + str(msg.qos) + " " + str(msg.payload))
     try:
+        print(msg.payload.decode("utf-8"))
         MessageParser(msg.payload.decode("utf-8"))
     except Exception as e:
         print(e)
@@ -161,17 +165,18 @@ def on_message(q,e,msg):
 
 def on_subscribe(q,w,mid, granted_qos):
     print("Subscribed: " + str(mid) + " " + str(granted_qos))
-
+def on_disconnect(client, userdata, rc):
+    print("disconnected with rtn code [%d]"% (rc) )
 
 def setup_listener():
     mqttc = mqtt.Client()
     # Assign event callbacks
     mqttc.on_message = on_message
-
+    mqttc.on_disconnect =  on_disconnect
     mqttc.on_subscribe = on_subscribe
     # Connect
     mqttc.connect("broker.hivemq.com", 1883, 60)
-    mqttc.subscribe("mts_hardware_get_info_chanel", qos=0)
+    mqttc.subscribe("mts_hardware_get_info_chanel", qos=1)
     # Continue the network loop
     mqttc.loop_forever()
 
@@ -179,23 +184,30 @@ def setup_listener():
 def analyzer(id):
     while(True):
         if(not queue.empty()):
-            print('analyzer '+ str(id) + 'start analyze')
+            if debug : print('analyzer '+ str(id) + 'start analyze')
             id = queue.get()
-
-            # make request to api
-            limits = [5, 10, 20, 30, 40, 60, 70, 80, 90, 100, 110]
-            random.seed()
-            limit = limits[random.randrange(0, len(limits) - 1)]
-            task = SpeedTask.objects.get(id=id)
-            if (task.loc_telemetry.spd > limit):
-                speed_excess = SpeedExcess.objects.create()
-                speed_excess.loc_telemetry = task.loc_telemetry
-                speed_excess.limit = limit
-                speed_excess.save()
-                task.delete()
+            task = LocationTelemetry.objects.get(id=id)
+            analys(task)
         else:
             print('analyzer '+ str(id) + 'is waiting')
-        time.sleep(5)
+        time.sleep(1)
+
+
+def analys(telemetry):
+    try:
+        # make request to api
+        limits = [5, 10, 20, 30, 40, 60, 70, 80, 90, 100, 110]
+        limits = [60, 70, 80, 90, 100, 110]
+        random.seed()
+        limit = limits[random.randrange(0, len(limits) - 1)]
+        if (telemetry.spd > limit):
+            speed_excess = SpeedExcess.objects.create()
+            speed_excess.loc_telemetry = telemetry
+            speed_excess.limit = limit
+            speed_excess.save()
+            print('speedExceed')
+    except Exception as ex:
+        print(ex)
 
 def lauch_analyzers(count):
     for i in range(0,count):
@@ -203,19 +215,27 @@ def lauch_analyzers(count):
         process.start()
         analyzers.append(process)
 
-
+listner = multiprocessing.Process(target=setup_listener, args=())
 def lauch_listener():
     listner = multiprocessing.Process(target=setup_listener, args=())
     listner.start()
     # while(True):
-    #    print("_")
+    #    if debug : print("_")
     #    time.sleep(3)
 
 
 
-print('prepare to lauch')
+if debug : print('prepare to lauch')
+col=0
 if mqtt_listener is None:
     #setup_listener()
     lauch_listener()
+    #listner = multiprocessing.Process(target=setup_listener, args=())
+    #listner.start()
+#while True:
+
+   #print(listner.is_alive())
+    #time.sleep(0.5)
+
 if len(analyzers) == 0:
-    lauch_analyzers(1)
+    lauch_analyzers(10)
