@@ -15,26 +15,34 @@ queue = multiprocessing.Queue()
 analyzers = []
 debug = False
 
-def get_car_data(request):
+def get_dynamic_data(request):
     try:
         json_data = json.loads(str(request.body, encoding='utf-8'))
         print(json_data)
-        vin = json_data['vin']
+        id = json_data['vehicle_id']
+        limit = json_data['limit']
 
-        vehicle = Vehicle.objects.get(vin=vin)
+        vehicle = Vehicle.objects.get(pk=id)
 
         if vehicle is None:
             return JsonResponse({"code": 404})
         else:
 
-            telemetry = LocationTelemetry.objects.filter(vehicle=vehicle).values('id', 'spd', 'latitude', 'longitude')[:5]
+            location = LocationTelemetry.objects.filter(vehicle=vehicle).values('id', 'spd', 'latitude', 'longitude')[:limit]
+            location = list(location)
+
+            telemetry = Telemetry.objects.filter(vehicle=vehicle).values('id', 'fuel')[
+                        :limit]
             telemetry = list(telemetry)
-            return JsonResponse({"code": 200, "data":
-                    telemetry
+
+            return JsonResponse({"code": 200, "location":
+                    location,
+                    "fuel": telemetry
                 })
     except Exception as e:
         print(e)
         return JsonResponse({"code": 404})
+
 
 class MessageParser:
     car_id = 0

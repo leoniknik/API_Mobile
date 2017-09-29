@@ -16,7 +16,7 @@ Including another URLconf
 from django.conf.urls import url
 from django.contrib import admin
 from API_SITE.views import logon, get_offered_vehicles, get_lists_of_vehicles_and_crashes, create_offer, get_offers, get_reviews, user_by_vehicle
-from API_Hardware.views import get_car_data
+from API_Hardware.views import  get_dynamic_data
 
 urlpatterns = [
     #url(r'^admin/', admin.site.urls),
@@ -27,6 +27,6 @@ urlpatterns = [
     url(r'^get_offers$', get_offers),
     url(r'^get_reviews$', get_reviews),
     url(r'^user_by_vehicle$', user_by_vehicle),
-    url(r'^get_location$', get_car_data),
+    url(r'^get_dynamic_data$', get_dynamic_data),
 
 ]
