@@ -38,8 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rat',
     'API_SITE',
-    'API_Hardware',
-    'django_extensions'
+    'API_Hardware'
 ]
 
 MIDDLEWARE = [
