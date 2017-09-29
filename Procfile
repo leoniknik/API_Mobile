@@ -1,1 +1,1 @@
-web: gunicorn -e DJANGO_SETTINGS_MODULE=PartyBot.settings PartyBot.wsgi --log-file -
+web: gunicorn -e DJANGO_SETTINGS_MODULE=API_Mobile.settings API_Mobile.wsgi --log-file -
