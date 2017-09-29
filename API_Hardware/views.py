@@ -53,7 +53,7 @@ class MessageParser:
                         crash_description.full_description = error
                     if crash_description.short_description == "":
                         crash_description.short_description = error
-                    crash_description.save()
+                    #crash_description.save()
 
                     crash = Crash.objects.create()
                     crash.actual = True
@@ -61,7 +61,7 @@ class MessageParser:
                     crash.date = calendar.timegm(time.gmtime())
 #datetime.datetime.utcnow()#str(datetime.datetime)#message_date_time
                     crash.vehicle = vehicle
-                    crash.save()
+                    #crash.save()
                     if debug : print(error)
 
 
@@ -238,4 +238,4 @@ if mqtt_listener is None:
     #time.sleep(0.5)
 
 if len(analyzers) == 0:
-    lauch_analyzers(10)
+    lauch_analyzers(1)

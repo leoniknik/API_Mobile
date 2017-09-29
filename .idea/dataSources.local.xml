@@ -11,12 +11,5 @@
       <user-name>root</user-name>
       <introspection-schemas>*:rat</introspection-schemas>
     </data-source>
-    <data-source name="mydatabase" uuid="32c93c9c-47b9-48c2-85c3-0e522b15174f">
-      <database-info product="SQLite" version="3.16.1" jdbc-version="2.1" driver-name="SQLiteJDBC" driver-version="native" />
-      <case-sensitivity plain-identifiers="mixed" quoted-identifiers="mixed" />
-      <secret-storage>master_key</secret-storage>
-      <auth-required>false</auth-required>
-      <introspection-schemas>*:</introspection-schemas>
-    </data-source>
   </component>
 </project>
