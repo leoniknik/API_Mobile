@@ -14,3 +14,6 @@ from django.core.wsgi import get_wsgi_application
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "API_Mobile.settings")
 
 application = get_wsgi_application()
+
+print('wsgi')
+import API_Hardware.views
